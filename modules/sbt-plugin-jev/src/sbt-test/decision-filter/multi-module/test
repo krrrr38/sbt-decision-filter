@@ -1,0 +1,21 @@
+$ exec git init -q
+$ exec git config user.email test@example.com
+$ exec git config user.name test
+$ exec git config commit.gpgsign false
+$ exec git add -A
+$ exec git commit -q -m init
+$ exec git branch base
+
+# Nothing changed: every test class runs, and the deliberately failing ones fail.
+-> decisionFilterTest
+$ exists target/decision-filter/selection.json
+
+# Change the library without committing it: only the affected classes run.
+$ copy-file changes/Lib.scala a/src/main/scala/Lib.scala
+> decisionFilterTest
+
+# A plain test run afterwards is not filtered.
+-> test
+
+# And it works again after that.
+> decisionFilterTest
