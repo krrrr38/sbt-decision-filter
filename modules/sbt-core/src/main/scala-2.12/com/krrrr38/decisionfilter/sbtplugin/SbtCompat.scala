@@ -1,6 +1,6 @@
 package com.krrrr38.decisionfilter.sbtplugin
 
-import com.krrrr38.decisionfilter.select.GateConfig
+import com.krrrr38.decisionfilter.select.{GateConfig, SelectionDocument}
 import sbt._
 import sbt.Keys._
 
@@ -8,7 +8,7 @@ import sbt.Keys._
 private[sbtplugin] object SbtCompat {
   import DecisionFilterKeys._
 
-  def selectTask: Def.Initialize[Task[File]] = Def.task {
+  def selectionTask: Def.Initialize[Task[SelectionDocument]] = Def.task {
     DecisionFilterPlugin.runSelect(
       DecisionFilterPlugin.Inputs(
         buildRoot = (ThisBuild / baseDirectory).value,

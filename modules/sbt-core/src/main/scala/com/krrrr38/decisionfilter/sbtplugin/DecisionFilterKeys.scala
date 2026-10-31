@@ -4,7 +4,7 @@ import java.io.File
 
 import scala.concurrent.duration.FiniteDuration
 
-import com.krrrr38.decisionfilter.select.BackendFactory
+import com.krrrr38.decisionfilter.select.{BackendFactory, SelectionDocument}
 import sbt._
 
 trait DecisionFilterKeys {
@@ -12,6 +12,10 @@ trait DecisionFilterKeys {
   @transient
   val decisionFilterSelect =
     taskKey[File]("Selects the tests the current diff can affect and writes selection.json. Returns its path.")
+  @transient
+  val decisionFilterSelection =
+    taskKey[SelectionDocument]("Runs the selection and returns it; decisionFilterSelect and decisionFilterTest use it.")
+      .withRank(KeyRanks.Invisible)
   val decisionFilterSelectionFile = settingKey[File]("Where selection.json is written.")
   val decisionFilterBase =
     settingKey[Option[String]]("Git ref to compare against. Default: $DECISION_FILTER_BASE, " +

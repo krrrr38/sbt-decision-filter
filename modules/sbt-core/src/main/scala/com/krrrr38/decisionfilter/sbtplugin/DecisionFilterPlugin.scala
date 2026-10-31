@@ -1,12 +1,8 @@
 package com.krrrr38.decisionfilter.sbtplugin
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
-import com.krrrr38.decisionfilter.internal.json.Json
 import com.krrrr38.decisionfilter.select._
 import sbt._
 import sbt.Keys._
@@ -38,7 +34,9 @@ object DecisionFilterPlugin extends AutoPlugin {
     decisionFilterTimeout := 5.minutes,
     decisionFilterDryRun := false,
     decisionFilterBackends := Nil,
-    decisionFilterSelect := SbtCompat.selectTask.value,
+    decisionFilterSelection := SbtCompat.selectionTask.value,
+    decisionFilterSelection / aggregate := false,
+    decisionFilterSelect := { decisionFilterSelection.value; decisionFilterSelectionFile.value },
     decisionFilterSelect / aggregate := false
   )
 
@@ -71,7 +69,7 @@ object DecisionFilterPlugin extends AutoPlugin {
   )
 
   /** Called from the version-specific task definition in [[SbtCompat]]. */
-  private[sbtplugin] def runSelect(inputs: Inputs, log: Logger): File = {
+  private[sbtplugin] def runSelect(inputs: Inputs, log: Logger): SelectionDocument = {
     val backend = inputs.backends match {
       case Seq(one) => one
       case Seq() =>
@@ -96,7 +94,6 @@ object DecisionFilterPlugin extends AutoPlugin {
     )
     try new Selector(Env.System, new SbtLog(log)).run(config)
     catch { case e: InvalidConfig => throw new MessageOnlyException(s"decision-filter: ${e.getMessage}") }
-    inputs.output
   }
 
   /** Module id, test source directories and Scala version of every project in the build. */
@@ -108,16 +105,6 @@ object DecisionFilterPlugin extends AutoPlugin {
       if (dirs.isEmpty) None else Some(ModuleSources(ref.project, dirs, scalaV))
     }
   }
-
-  /** The test classes to leave out, as written to selection.json. Unreadable means none. */
-  private def readDeselected(file: File): Set[String] =
-    try
-      Json.parse(new String(Files.readAllBytes(file.toPath), StandardCharsets.UTF_8)).toOption match {
-        case Some(json) if json.field("mode").flatMap(_.asString).contains(SelectionDocument.ModeFilter) =>
-          json.field("deselected").flatMap(_.asArray).getOrElse(Vector.empty).flatMap(_.asString).toSet
-        case _ => Set.empty
-      }
-    catch { case NonFatal(_) => Set.empty }
 
   private final class SbtLog(log: Logger) extends com.krrrr38.decisionfilter.select.Log {
     def info(msg: String): Unit = log.info(msg)
@@ -133,8 +120,8 @@ object DecisionFilterPlugin extends AutoPlugin {
     * inside this command, so its success or failure is the tests' (which is what CI and sbt server clients see).
     */
   private lazy val testCommand: Command = Command.command("decisionFilterTest") { s0 =>
-    val (s1, file) = Project.extract(s0).runTask(ThisBuild / decisionFilterSelect, s0)
-    val deselected = readDeselected(file)
+    val (s1, selection) = Project.extract(s0).runTask(ThisBuild / decisionFilterSelection, s0)
+    val deselected = selection.deselected
     val s2 = if (deselected.isEmpty) s1 else s1.put(activeDeselection, deselected)
     try SbtCompat.runTests(Project.extract(s2), s2).remove(activeDeselection)
     catch {

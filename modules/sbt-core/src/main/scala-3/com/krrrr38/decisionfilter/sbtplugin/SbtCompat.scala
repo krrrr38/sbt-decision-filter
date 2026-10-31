@@ -1,6 +1,6 @@
 package com.krrrr38.decisionfilter.sbtplugin
 
-import com.krrrr38.decisionfilter.select.GateConfig
+import com.krrrr38.decisionfilter.select.{GateConfig, SelectionDocument}
 import sbt.*
 import sbt.Keys.*
 
@@ -9,7 +9,7 @@ private[sbtplugin] object SbtCompat {
   import DecisionFilterKeys.*
 
   // Selection depends on the git working tree, so its result must never come from sbt 2's task cache.
-  def selectTask: Def.Initialize[Task[File]] = Def.task {
+  def selectionTask: Def.Initialize[Task[SelectionDocument]] = Def.task {
     Def.uncached {
       DecisionFilterPlugin.runSelect(
         DecisionFilterPlugin.Inputs(
